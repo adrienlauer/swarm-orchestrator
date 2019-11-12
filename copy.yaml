@@ -1,0 +1,24 @@
+---
+- hosts: localhost
+  tasks:
+  - name: 'Checking required parameters'
+    assert:
+      that:
+      - stack_path is defined
+      - copy_sources is defined
+      - copy_target is defined
+      - copy_target.path is defined
+
+- hosts: "{% if copy_target.labels is defined %}{{ copy_target.labels | dict2items | json_query('[].[key, value]') | map('join', '_') | list | join(':&') }}{% else %}all{% endif %}"
+  run_once: "{{ copy_target.once | default(False) }}"
+  tasks:
+  - name: "Copying {{ item }} to {{ copy_target.path }}"
+    loop: copy_sources
+    synchronize:
+      archive: true
+      use_ssh_args: true
+      checksum: true
+      src: "{{ stack_path }}/"
+      dest: "{{ copy_target.path }}/"
+      rsync_opts:
+      - "--include={{ item }}"
